@@ -25,15 +25,18 @@ def test_register_user_empty_password():
 
 def test_search_tasks_text_found():
     storage = Storage.__new__(Storage)
+    
 
     session = MagicMock()
     storage.SessionLocal = MagicMock()
     storage.SessionLocal.return_value.__enter__.return_value = session
+    #мокаем сессию и возвращаем SessionLocal в мок
+        
 
     user = User(id=1, username="никита")
-    storage._get_user = MagicMock(return_value=user)
+    storage.get_user = MagicMock(return_value=user)
 
-    task = Task(description="Купить молоко", completed=False, deadline=None)
+    task = Task(description="Купить молоко", completed=False, deadline=None, category="пользовательская")
 
     query_mock = MagicMock()
 
@@ -48,7 +51,7 @@ def test_search_tasks_text_found():
         date_to=None
     )
 
-    assert result == ["Купить молоко"]
+    assert result == ["[пользовательская] Купить молоко"]
 
 def test_search_tasks_text_not_found():
     storage = Storage.__new__(Storage)
@@ -58,13 +61,8 @@ def test_search_tasks_text_not_found():
     storage.SessionLocal.return_value.__enter__.return_value = session
 
     user = User(id=1, username="никита")
-    storage._get_user = MagicMock(return_value=user)
+    storage.get_user = MagicMock(return_value=user)
 
-    query_mock = MagicMock()
-    session.query.return_value = query_mock
-    query_mock.filter.return_value = query_mock
-
-    query_mock.all.return_value = []
 
     result = storage.search_tasks(
         username="никита",
@@ -88,7 +86,6 @@ def test_check_login_success():
     storage.SessionLocal = MagicMock()
     storage.SessionLocal.return_value.__enter__.return_value = session
 
-    session.query.return_value.filter_by.return_value.first.return_value = user
 
     import bcrypt
     bcrypt.checkpw = MagicMock(return_value=True)
@@ -104,24 +101,26 @@ def test_add_task_user_not_found():
     storage.SessionLocal = MagicMock()
     storage.SessionLocal.return_value.__enter__.return_value = session
 
-    storage._get_user = MagicMock(return_value=None)
+    storage.get_user = MagicMock(return_value=None)
 
     with pytest.raises(UserNotFoundError):
         storage.add_task("ghost", "test task")
 
 
-def test_get_completed_tasks_empty():
+def test_delete_task():
     storage = Storage.__new__(Storage)
+
+    user = User(id=1, username="nikita")
+    task = Task(description="Задача", completed=False)
 
     session = MagicMock()
     storage.SessionLocal = MagicMock()
     storage.SessionLocal.return_value.__enter__.return_value = session
 
-    user = User(id=1, username="nikita")
-    storage._get_user = MagicMock(return_value=user)
+    storage.get_user = MagicMock(return_value=user)
 
-    session.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    session.query.return_value.filter.return_value.all.return_value = [task]
 
-    result = storage.get_completed_tasks("nikita")
+    storage.delete_task("nikita", "Задача")
 
-    assert result == []
+    assert task.completed is True
