@@ -94,7 +94,7 @@ class MainWindow(QWidget):
         dialog = DeadlineDialog(self)
 
         if dialog.exec() != QDialog.DialogCode.Accepted:
-            return  # нажали "Отмена"
+            return #dialog exec вызывает класс, вызывающий окно выбора задачи и закрывает его только тогда, когда пользователь нажимает ок или отмена
 
         deadline = dialog.get_deadline()
         category = dialog.get_category()

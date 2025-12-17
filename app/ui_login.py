@@ -1,4 +1,3 @@
-# app/ui_login.py
 from PyQt6.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox
 from .ui_main import MainWindow
 from .ui_register import RegisterWindow

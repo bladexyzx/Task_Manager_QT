@@ -1,4 +1,3 @@
-# app/storage.py
 import os
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, func, or_
@@ -182,7 +181,7 @@ class Storage:
 
     # -------------------- РАБОТА С ЗАДАЧАМИ ------------------------
 
-    def _get_user(self, session, username):
+    def get_user(self, session, username):
         """
         Возвращает объект пользователя по логину.
 
@@ -215,7 +214,7 @@ class Storage:
         :raises UserNotFoundError: если пользователь не найден.
         """
         with self.SessionLocal() as session:
-            user = self._get_user(session, username)
+            user = self.get_user(session, username)
             if not user:
                 raise UserNotFoundError(f"Пользователь '{username}' не существует")
 
@@ -229,10 +228,24 @@ class Storage:
             session.commit()
 
     def get_tasks(self, username):
+        """
+            Возвращает список текущих задач пользователя.
+
+            Метод ищет пользователя по логину, после чего выбирает все его
+            невыполненные задачи из базы данных, сортируя их по дедлайну.
+
+            :param username: Логин пользователя, для которого нужно получить задачи.
+            :type username: str
+
+            :raises UserNotFoundError: если пользователь с таким логином не существует.
+
+            :return: Список строк с описанием задач пользователя.
+            :rtype: list[str]
+            """
         with self.SessionLocal() as session:
-            user = self._get_user(session, username)
-            if not user:
-                raise UserNotFoundError(f"Пользователь '{username}' не существует")
+
+            user = self.get_user(session, username)
+            
 
             rows = session.query(Task).filter(
                 Task.user_id == user.id,
@@ -243,12 +256,15 @@ class Storage:
             now = datetime.now()
 
             for r in rows:
-                overdue = r.deadline and r.deadline < now
+                if r.deadline < now:
+                    overdue = True
+                else:
+                    overdue = False
 
                 text = f"[{r.category}] {r.description}"
 
-                if r.deadline:
-                    text += f" (до {r.deadline:%d.%m.%Y %H:%M})"
+                
+                text += f" (до {r.deadline:%d.%m.%Y %H:%M})"
 
                 if overdue:
                     text += "   ПРОСРОЧЕНО!"
@@ -268,9 +284,8 @@ class Storage:
         :type task: str
         """
         with self.SessionLocal() as session:
-            user = self._get_user(session, username)
-            if not user:
-                return
+            user = self.get_user(session, username)
+
             rows = session.query(Task).filter(
                 Task.user_id == user.id,
                 Task.description == task,
@@ -292,7 +307,7 @@ class Storage:
         :rtype: list[str]
         """
         with self.SessionLocal() as session:
-            user = self._get_user(session, username)
+            user = self.get_user(session, username)
             if not user:
                 raise UserNotFoundError(f"Пользователь '{username}' не существует")
 
@@ -319,9 +334,7 @@ class Storage:
         :rtype: list[str]
         """
         with self.SessionLocal() as session:
-            user = self._get_user(session, username)
-            if not user:
-                return []
+            user = self.get_user(session, username)
 
             query = session.query(Task).filter(
                 Task.user_id == user.id,
